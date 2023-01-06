@@ -1,0 +1,33 @@
+{
+    "$schema": "https://json-schema.org/draft-07/schema#",
+    "title":"Stock",
+    "description": "A stock market summary from a given date, with the opening and closing values.",
+
+    "type":"array",
+    "items":
+    {
+        "type": "object",
+        "description":"A single stock entry.",
+        "properties":
+        {
+            "date":
+            {
+                "type":"string",
+                "description":"the date of the stock."
+            },
+            "open":
+            {
+                "type":"number",
+                "description":"The value of the stock market when it opened."
+            },
+            "close":
+            {
+                "type":"number",
+                "description":"The value of the stock market when it closed."
+            }
+        }
+    },
+    "required": ["stock","date","open","close"],
+    "additionalProperties": false
+}
+

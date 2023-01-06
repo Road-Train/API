@@ -1,0 +1,50 @@
+{
+    "$schema": "https://json-schema.org/draft-07/schema#",
+    "title": "Tweet",
+    "description": "A tweet from Elon Musk, and the public sentiment of said tweet.",
+    "type":"array",
+    "items":
+    {
+        "type": "object",
+        "description":"A single tweet",
+        "properties":
+        {
+            "date":
+            {
+                "type":"string",
+                "description":"The date the tweet was posted."
+            },
+            "time":
+            {
+                "type":"string",
+                "description":"The time the tweet was posted."
+            },
+            "content":
+            {
+                "type":"string",
+                "description":"The content of the tweet."
+            },
+            "sentiment":
+            {
+                "description":"The public sentiment regarding the tweet, displayed in text and as a numeric value.",
+                "properties":
+                {
+                    "sentimentText":
+                    {
+                        "enum":["positive","neutral","negative"]
+                    },
+                    "sentimentValue":
+                    {
+                        "type":"number",
+                        "minimum":0,
+                        "maximum":1
+                    }
+                },
+                "required":["sentimentText","sentimentValue"],
+                "additionalProperties": false
+            }
+        },
+        "required": ["date","time","content","sentiment"],
+        "additionalProperties": false
+    }
+}
