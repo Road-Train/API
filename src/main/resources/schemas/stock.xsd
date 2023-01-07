@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xsd:schema xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+
+    <!-- Simple types-->
+    <xsd:simpleType name="dateType">
+        <xsd:restriction base="xsd:date">
+        <xsd:minInclusive value="1792-05-17"/>
+        </xsd:restriction>
+    </xsd:simpleType>
+
+    <!-- Complex types-->
+    <xsd:complexType name="stockType">
+        <xsd:sequence>
+            <xsd:element name="open" type="xsd:double"/>
+            <xsd:element name="close" type="xsd:double"/>
+        </xsd:sequence>
+        <xsd:attribute name="date" type="dateType"/>
+    </xsd:complexType>
+
+    <xsd:element name="stocks">
+        <xsd:complexType>
+            <xsd:sequence>
+                <xsd:element name="stock" type="stockType" maxOccurs="unbounded"/>
+            </xsd:sequence>
+        </xsd:complexType>
+    </xsd:element>
+    
+</xsd:schema>
