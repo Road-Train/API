@@ -33,7 +33,6 @@ public class API
     @PathParam("format")
     private String format;
     private Connection connection;
-    private final List<FileContent> inMemoryFileStore = new ArrayList<>();
     @PathParam("table")//The table we're selecting.
     private String table;
     private Statement makeConnection() throws ClassNotFoundException, SQLException
@@ -56,15 +55,15 @@ public class API
             switch(table)
             {
                 case "tweets":
-                    resultSet = statement.executeQuery("select Date ,Time, Text, sentiment from tweets");
+                    resultSet = statement.executeQuery("select Date ,Time, Text, sentiment from tweets order by Date, Time");
                     output = formatToUse.equals(Format.JSON) ? buildJSONTweetResponse(resultSet) : buildXMLTweetResponse(resultSet);
                     break;
                 case "stocks":
-                    resultSet = statement.executeQuery("select Date, Open, Close from stocks");
+                    resultSet = statement.executeQuery("select Date, Open, Close from stocks order by Date");
                     output = formatToUse.equals(Format.JSON) ? buildJSONStockResponse(resultSet) : buildXMLStockResponse(resultSet);
                     break;
                 case "bitcoins":
-                    resultSet = statement.executeQuery("select Date, Open, Close from bitcoin");
+                    resultSet = statement.executeQuery("select Date, Open, Close from bitcoin order by Date");
                     output = formatToUse.equals(Format.JSON) ? buildJSONBitcoinResponse(resultSet) : buildXMLBitcoinResponse(resultSet);
                     break;
             }
@@ -116,7 +115,7 @@ public class API
             switch(table)
             {
                 case "tweets":
-                    resultSet = statement.executeQuery("select Date ,Time, Text, sentiment from tweets where Date = " + formattedDate);
+                    resultSet = statement.executeQuery("select Date ,Time, Text, sentiment from tweets where Date = " + formattedDate +" order by Time");
                     output = formatToUse.equals(Format.JSON) ? buildJSONTweetResponse(resultSet) : buildXMLTweetResponse(resultSet);
                     break;
                 case "stocks":
@@ -295,11 +294,11 @@ public class API
         switch(table)
         {
             case "tweets":
-                path = "C:\\Users\\trol1\\IdeaProjects\\API\\src\\main\\resources\\schemas\\tweetschema.xsd";
+                path = "C:\\Users\\trol1\\IdeaProjects\\API\\src\\main\\resources\\schemas\\tweetschema.json";
                 break;
             case "bitcoin":
             case "stocks":
-                path = "C:\\Users\\trol1\\IdeaProjects\\API\\src\\main\\resources\\schemas\\stockschema.xsd";
+                path = "C:\\Users\\trol1\\IdeaProjects\\API\\src\\main\\resources\\schemas\\stockschema.json";
                 break;
         }
         try
@@ -327,11 +326,11 @@ public class API
         switch(table)
         {
             case "tweets":
-                path = "C:\\Users\\trol1\\IdeaProjects\\API\\src\\main\\resources\\schemas\\tweets.xsd";
+                path = "C:\\Users\\trol1\\IdeaProjects\\API\\src\\main\\resources\\schemas\\tweet.xsd";
                 break;
             case "bitcoin":
             case "stocks":
-                path = "C:\\Users\\trol1\\IdeaProjects\\API\\src\\main\\resources\\schemas\\stocks.xsd";
+                path = "C:\\Users\\trol1\\IdeaProjects\\API\\src\\main\\resources\\schemas\\stock.xsd";
                 break;
         }
         try
@@ -345,7 +344,7 @@ public class API
         {
             return e.getMessage();
         }
-        return "Xml validated";
+        return "Xml validated.";
     }
     private Format checkFormat(String format)
     {
