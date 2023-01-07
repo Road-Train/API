@@ -27,12 +27,13 @@ import java.time.LocalTime;
 import java.util.*;
 
 import static com.api.Parser.JSON_MAPPER;
-@ApplicationPath("/api")
-@Path("/{table}")
+@Path("/{table}/{format}")
 public class API
 {
+    @PathParam("format")
+    private String format;
     private Connection connection;
-    private final List<FileContent> inMemoryFileStore = new ArrayList();
+    private final List<FileContent> inMemoryFileStore = new ArrayList<>();
     @PathParam("table")//The table we're selecting.
     private String table;
     private Statement makeConnection() throws ClassNotFoundException, SQLException
@@ -41,10 +42,10 @@ public class API
         connection = DriverManager.getConnection("jdbc:sqlite:C:\\Users\\trol1\\IdeaProjects\\API\\database.sqlite");
         return connection.createStatement();
     }
-    @Path("/{format}/allData")
+    @Path("/allData")
     @GET
     @Produces({"application/xml", "application/json"})
-    public String getAllData(@PathParam("format") String format)
+    public String getAllData()
     {
         String output = null;
         try
@@ -100,10 +101,10 @@ public class API
         }
         return output;
     }
-    @Path("/{format}/{date}")
+    @Path("/{date}")
     @GET
     @Produces({"application/json", "application/xml"})
-    public String getDataByDate(@PathParam("format") String format, @PathParam("date") String date)
+    public String getDataByDate(@PathParam("date") String date)
     {
         String formattedDate = "'" + date + "'";
         String output = null;
@@ -165,7 +166,7 @@ public class API
         }
         return "fix this";
     }
-    @Path("edit")
+    @Path("/edit")
     @POST
     public String editData()
     {
