@@ -7,10 +7,7 @@ import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlProperty;
 import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlRootElement;
 import com.fasterxml.jackson.datatype.jsr310.ser.LocalDateSerializer;
 import com.fasterxml.jackson.datatype.jsr310.ser.LocalTimeSerializer;
-import jakarta.persistence.Column;
-import jakarta.persistence.Convert;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
 
 import java.io.Serializable;
 import java.time.LocalDate;
@@ -18,6 +15,8 @@ import java.time.LocalTime;
 import java.util.Map;
 @JacksonXmlRootElement(localName = "tweet")
 @Table(name = "tweets")
+@IdClass(DateTimeId.class)
+@Entity
 public class Tweet implements Serializable
 {
     @Id

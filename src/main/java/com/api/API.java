@@ -1,11 +1,12 @@
 package com.api;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.networknt.schema.JsonSchema;
 import com.networknt.schema.JsonSchemaFactory;
 import com.networknt.schema.SpecVersion;
 import com.networknt.schema.ValidationMessage;
 import jakarta.ws.rs.*;
-import jakarta.ws.rs.core.MediaType;
+import jakarta.ws.rs.core.*;
 import model.Bitcoin;
 import model.Stock;
 import model.Tweet;
@@ -27,11 +28,9 @@ import java.time.LocalTime;
 import java.util.*;
 
 import static com.api.Parser.JSON_MAPPER;
-@Path("/{table}/{format}")
+@Path("/{table}")
 public class API
 {
-    @PathParam("format")
-    private String format;
     private Connection connection;
     @PathParam("table")//The table we're selecting.
     private String table;
@@ -43,14 +42,16 @@ public class API
     }
     @Path("/allData")
     @GET
-    @Produces({"application/xml", "application/json"})
-    public String getAllData()
+    @Produces({"application/json", "application/xml"})
+    public Response getAllData(@Context HttpHeaders headers)
     {
+        Response.ResponseBuilder responseBuilder;
+        Response response;
         String output = null;
         try
         {
             Statement statement = makeConnection();
-            Format formatToUse = checkFormat(format);
+            Format formatToUse = checkFormat(headers);
             ResultSet resultSet;
             switch(table)
             {
@@ -74,11 +75,14 @@ public class API
                 validationMessage = validateJSON(output);
                 if(validationMessage.equals("Json validated."))
                 {
-                    return output;
+                    responseBuilder = Response.ok(output);
+                    response = responseBuilder.build();
                 }
                 else
                 {
-                    return validationMessage;
+                    List<Variant> variantList = new ArrayList<>();
+                    responseBuilder = Response.notAcceptable(variantList);
+                    response = responseBuilder.status(406).header("message",validationMessage).build();
                 }
             }
             else
@@ -86,31 +90,37 @@ public class API
                 validationMessage = validateXML(String.valueOf(output));
                 if(validationMessage.equals("Xml validated."))
                 {
-                    return output;
+                    responseBuilder = Response.ok(output);
+                    response = responseBuilder.build();
                 }
                 else
                 {
-                    return validationMessage;
+                    List<Variant> variantList = new ArrayList<>();
+                    responseBuilder = Response.notAcceptable(variantList);
+                    response = responseBuilder.status(406).header("message",validationMessage).build();
                 }
             }
+            return response;
         }
-        catch(ClassNotFoundException | SQLException e)
+        catch(IllegalArgumentException | ClassNotFoundException | SQLException e)
         {
-            output = String.valueOf(e);
+            List<Variant> variantList = new ArrayList<>();
+            responseBuilder = Response.notAcceptable(variantList);
+            response = responseBuilder.status(406).header("message",e.getMessage()).build();
+            return response;
         }
-        return output;
     }
-    @Path("/{date}")
+    @Path("/GET/{date}")
     @GET
     @Produces({"application/json", "application/xml"})
-    public String getDataByDate(@PathParam("date") String date)
+    public String getDataByDate(@PathParam("date") String date, @Context HttpHeaders headers)
     {
         String formattedDate = "'" + date + "'";
         String output = null;
         try
         {
             Statement statement = makeConnection();
-            Format formatToUse = checkFormat(format);
+            Format formatToUse = checkFormat(headers);
             ResultSet resultSet;
             switch(table)
             {
@@ -137,14 +147,42 @@ public class API
     @Path("/insert")
     @Consumes(MediaType.APPLICATION_JSON)
     @POST
-    public String insertJson()
+    public String insertJson(String data)
     {
 
         try
         {
             Statement statement = makeConnection();
+            ResultSet resultSet;
+            String validationString = validateJSON(data);
+            if(!validationString.equals("Json validated."))
+            {
+                throw new IllegalWebFormatException(validationString);
+            }
+            switch(table)
+            {
+                case "tweets":
+                    Tweet[] tweets = JSON_MAPPER.readValue(data, Tweet[].class);
+                    for(Tweet tweet : tweets)
+                    {
+                        String sql = "insert into tweets(Date,Time,Text,sentiment) values(?,?,?,?)";
+                        PreparedStatement preparedStatement = connection.prepareStatement(sql);
+                        preparedStatement.setString(1,tweet.getDate().toString());
+                        preparedStatement.setString(2,tweet.getTime().toString());
+                        preparedStatement.setString(3,tweet.getContent());
+                        preparedStatement.setString(4,tweet.getSentiment().toString());
+                        preparedStatement.execute();
+                    }
+                    break;
+                case "stocks":
+                    Stock[] stocks = JSON_MAPPER.readValue(data, Stock[].class);
+                    break;
+                case "bitcoins":
+                    Bitcoin[] bitcoins = JSON_MAPPER.readValue(data, Bitcoin[].class);
+                    break;
+            }
         }
-        catch(SQLException | ClassNotFoundException e)
+        catch(SQLException | ClassNotFoundException | JsonProcessingException e)
         {
             throw new RuntimeException(e);
         }
@@ -166,7 +204,7 @@ public class API
         return "fix this";
     }
     @Path("/edit")
-    @POST
+    @PUT
     public String editData()
     {
         try
@@ -178,6 +216,11 @@ public class API
             throw new RuntimeException(e);
         }
         return "fix this";
+    }
+    @Path("/DELETE/{date}")
+    public Response deleteByDate(@PathParam("date")String date)
+    {
+        return Response.ok().build();
     }
     private String buildJSONTweetResponse(ResultSet resultSet) throws SQLException
     {
@@ -286,7 +329,7 @@ public class API
         coin.setClose(resultSet.getDouble(3));
         return coin;
     }
-
+    @Consumes({"application/json","text/json"})
     private String validateJSON(String toValidate)
     {
         JsonSchemaFactory factory = JsonSchemaFactory.getInstance(SpecVersion.VersionFlag.V7);
@@ -346,8 +389,19 @@ public class API
         }
         return "Xml validated.";
     }
-    private Format checkFormat(String format)
+    private Format checkFormat(HttpHeaders headers)
     {
-        return format.equalsIgnoreCase("json") ? Format.JSON : Format.XML;
+        String format = headers.getAcceptableMediaTypes().toString();
+        format = format.substring(1,format.indexOf("]"));
+        switch(format)
+        {
+            case "application/json":
+                return Format.JSON;
+            case "application/xml":
+                return Format.XML;
+            default:
+            throw new IllegalWebFormatException("Invalid format requested. Accepted formats are application/json and application/xml.");
+        }
     }
+
 }

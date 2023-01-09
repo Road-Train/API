@@ -11,7 +11,7 @@ public enum SentimentText
     }
     public static SentimentText getValue(String key)
     {
-        key = key.replaceAll("\'","");
+        key = key.replaceAll("'","");
         for(SentimentText sentimentText : SentimentText.values())
         {
             if(sentimentText.text.equals(key))
