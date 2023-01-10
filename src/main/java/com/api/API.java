@@ -1,5 +1,6 @@
 package com.api;
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.networknt.schema.JsonSchema;
 import com.networknt.schema.JsonSchemaFactory;
@@ -28,19 +29,19 @@ import java.time.LocalTime;
 import java.util.*;
 
 import static com.api.Parser.JSON_MAPPER;
+import static com.api.Parser.XML_MAPPER;
 @Path("/{table}")
 public class API
 {
     private Connection connection;
     @PathParam("table")//The table we're selecting.
     private String table;
-    private Statement makeConnection() throws ClassNotFoundException, SQLException
+    private Connection makeConnection() throws ClassNotFoundException, SQLException
     {
         Class.forName("org.sqlite.JDBC");
-        connection = DriverManager.getConnection("jdbc:sqlite:C:\\Users\\trol1\\IdeaProjects\\API\\database.sqlite");
-        return connection.createStatement();
+        return DriverManager.getConnection("jdbc:sqlite:C:\\Users\\trol1\\IdeaProjects\\API\\database.sqlite");
     }
-    @Path("/allData")
+    @Path("/GET/allData")
     @GET
     @Produces({"application/json", "application/xml"})
     public Response getAllData(@Context HttpHeaders headers)
@@ -50,7 +51,8 @@ public class API
         String output = null;
         try
         {
-            Statement statement = makeConnection();
+            connection = makeConnection();
+            Statement statement = connection.createStatement();
             Format formatToUse = checkFormat(headers);
             ResultSet resultSet;
             switch(table)
@@ -82,7 +84,7 @@ public class API
                 {
                     List<Variant> variantList = new ArrayList<>();
                     responseBuilder = Response.notAcceptable(variantList);
-                    response = responseBuilder.status(406).header("message",validationMessage).build();
+                    response = responseBuilder.status(406).header("message", validationMessage).build();
                 }
             }
             else
@@ -97,7 +99,7 @@ public class API
                 {
                     List<Variant> variantList = new ArrayList<>();
                     responseBuilder = Response.notAcceptable(variantList);
-                    response = responseBuilder.status(406).header("message",validationMessage).build();
+                    response = responseBuilder.status(406).header("message", validationMessage).build();
                 }
             }
             return response;
@@ -106,7 +108,7 @@ public class API
         {
             List<Variant> variantList = new ArrayList<>();
             responseBuilder = Response.notAcceptable(variantList);
-            response = responseBuilder.status(406).header("message",e.getMessage()).build();
+            response = responseBuilder.status(406).header("message", e.getMessage()).build();
             return response;
         }
     }
@@ -119,13 +121,14 @@ public class API
         String output = null;
         try
         {
-            Statement statement = makeConnection();
+            connection = makeConnection();
+            Statement statement = connection.createStatement();
             Format formatToUse = checkFormat(headers);
             ResultSet resultSet;
             switch(table)
             {
                 case "tweets":
-                    resultSet = statement.executeQuery("select Date ,Time, Text, sentiment from tweets where Date = " + formattedDate +" order by Time");
+                    resultSet = statement.executeQuery("select Date ,Time, Text, sentiment from tweets where Date = " + formattedDate + " order by Time");
                     output = formatToUse.equals(Format.JSON) ? buildJSONTweetResponse(resultSet) : buildXMLTweetResponse(resultSet);
                     break;
                 case "stocks":
@@ -137,6 +140,7 @@ public class API
                     output = formatToUse.equals(Format.JSON) ? buildJSONBitcoinResponse(resultSet) : buildXMLBitcoinResponse(resultSet);
                     break;
             }
+            connection.close();
         }
         catch(SQLException | ClassNotFoundException e)
         {
@@ -147,15 +151,13 @@ public class API
     @Path("/insert")
     @Consumes(MediaType.APPLICATION_JSON)
     @POST
-    public String insertJson(String data)
+    public Response insertJson(String data)
     {
 
         try
         {
-            Statement statement = makeConnection();
-            ResultSet resultSet;
             String validationString = validateJSON(data);
-            if(!validationString.equals("Json validated."))
+            if(! validationString.equals("Json validated."))
             {
                 throw new IllegalWebFormatException(validationString);
             }
@@ -163,64 +165,299 @@ public class API
             {
                 case "tweets":
                     Tweet[] tweets = JSON_MAPPER.readValue(data, Tweet[].class);
-                    for(Tweet tweet : tweets)
-                    {
-                        String sql = "insert into tweets(Date,Time,Text,sentiment) values(?,?,?,?)";
-                        PreparedStatement preparedStatement = connection.prepareStatement(sql);
-                        preparedStatement.setString(1,tweet.getDate().toString());
-                        preparedStatement.setString(2,tweet.getTime().toString());
-                        preparedStatement.setString(3,tweet.getContent());
-                        preparedStatement.setString(4,tweet.getSentiment().toString());
-                        preparedStatement.execute();
-                    }
+                    insertTweetsIntoDatabase(List.of(tweets));
                     break;
                 case "stocks":
                     Stock[] stocks = JSON_MAPPER.readValue(data, Stock[].class);
+                    insertStocksIntoDatabase(List.of(stocks));
                     break;
                 case "bitcoins":
                     Bitcoin[] bitcoins = JSON_MAPPER.readValue(data, Bitcoin[].class);
+                    insertBitcoinIntoDatabase(List.of(bitcoins));
                     break;
             }
         }
-        catch(SQLException | ClassNotFoundException | JsonProcessingException e)
+        catch(SQLException | JsonProcessingException e)
+        {
+            List<Variant> variantList = new ArrayList<>();
+            Response.ResponseBuilder responseBuilder = Response.notAcceptable(variantList);
+            return responseBuilder.status(406).header("message", e.getMessage()).build();
+        }
+        catch(ClassNotFoundException e)
         {
             throw new RuntimeException(e);
         }
-        return "fix this";
+        return Response.ok().build();
     }
     @Path("/insert")
     @Consumes(MediaType.APPLICATION_XML)
     @POST
-    public String insertXML()
+    public Response insertXML(String data)
     {
         try
         {
-            Statement statement = makeConnection();
+            String validationString = validateXML(data);
+            if(! validationString.equals("Xml validated."))
+            {
+                throw new IllegalWebFormatException(validationString);
+            }
+            switch(table)
+            {
+                case "tweets":
+                    List<Tweet> tweets = XML_MAPPER.readValue(data, new TypeReference<List<Tweet>>() {});
+                    insertTweetsIntoDatabase(tweets);
+                    break;
+                case "stocks":
+                    List<Stock> stocks = XML_MAPPER.readValue(data, new TypeReference<List<Stock>>() {});
+                    insertStocksIntoDatabase(stocks);
+                    break;
+                case "bitcoins":
+                    List<Bitcoin> bitcoins = XML_MAPPER.readValue(data, new TypeReference<List<Bitcoin>>() {
+                    });
+                    insertBitcoinIntoDatabase(bitcoins);
+                    break;
+            }
         }
-        catch(SQLException | ClassNotFoundException e)
+        catch(SQLException | JsonProcessingException | ClassNotFoundException e)
         {
-            throw new RuntimeException(e);
+            List<Variant> variantList = new ArrayList<>();
+            Response.ResponseBuilder responseBuilder = Response.notAcceptable(variantList);
+            return responseBuilder.status(406).header("message", e.getMessage()).build();
         }
-        return "fix this";
+        return Response.ok().build();
     }
     @Path("/edit")
+    @Consumes(MediaType.APPLICATION_JSON)
     @PUT
-    public String editData()
+    public Response jsonEditData(String data)
     {
         try
         {
-            Statement statement = makeConnection();
+            String validationString = validateJSON(data);
+            if(! validationString.equals("Json validated."))
+            {
+                throw new IllegalWebFormatException(validationString);
+
+            }
+            switch(table)
+            {
+                case "tweets":
+                    Tweet[] tweets = JSON_MAPPER.readValue(data, Tweet[].class);
+                    updateTweetData(List.of(tweets));
+                    break;
+                case "stocks":
+                    Stock[] stocks = JSON_MAPPER.readValue(data, Stock[].class);
+                    updateStockData(List.of(stocks));
+                    break;
+                case "bitcoins":
+                    Bitcoin[] bitcoins = JSON_MAPPER.readValue(data, Bitcoin[].class);
+                    updateBitcoinData(List.of(bitcoins));
+                    break;
+            }
+
+        }
+        catch(SQLException | JsonProcessingException | ClassNotFoundException e)
+        {
+            List<Variant> variantList = new ArrayList<>();
+            Response.ResponseBuilder responseBuilder = Response.notAcceptable(variantList);
+            return responseBuilder.status(406).header("message", e.getMessage()).build();
+        }
+        return Response.ok().build();
+    }
+    @Path("/edit")
+    @Consumes(MediaType.APPLICATION_XML)
+    @PUT
+    public Response XMLEditData(String data)
+    {
+        try
+        {
+            String validationString = validateXML(data);
+            if(! validationString.equals("Xml validated."))
+            {
+                throw new IllegalWebFormatException(validationString);
+
+            }
+            switch(table)
+            {
+                case "tweets":
+                    List<Tweet> tweets = XML_MAPPER.readValue(data, new TypeReference<List<Tweet>>() {});
+                    updateTweetData(tweets);
+                    break;
+                case "stocks":
+                    List<Stock> stocks = XML_MAPPER.readValue(data, new TypeReference<List<Stock>>() {});
+                    updateStockData(stocks);
+                    break;
+                case "bitcoins":
+                    List<Bitcoin> bitcoins = XML_MAPPER.readValue(data, new TypeReference<List<Bitcoin>>() {});
+                    updateBitcoinData(bitcoins);
+                    break;
+            }
+
+        }
+        catch(SQLException | JsonProcessingException | ClassNotFoundException e)
+        {
+            List<Variant> variantList = new ArrayList<>();
+            Response.ResponseBuilder responseBuilder = Response.notAcceptable(variantList);
+            return responseBuilder.status(406).header("message", e.getMessage()).build();
+        }
+        return Response.ok().build();
+    }
+    @Path("/DELETE/{date}/{time}")
+    @DELETE
+    public Response deleteByDateTime(@PathParam("date") String date, @PathParam("time") String time)
+    {
+        if(!table.equals("tweets"))
+        {
+            List<Variant> variantList = new ArrayList<>();
+            Response.ResponseBuilder responseBuilder = Response.notAcceptable(variantList);
+            return responseBuilder.status(406).header("message", "invalid request, time is specified but not valid.").build();
+        }
+        try
+        {
+            connection = makeConnection();
+            String formatDate = "'"+date+"'";
+            String formatTime = "'"+time+"'";
+            String sql = "delete from tweets where Date = "+formatDate+" and Time = "+formatTime;
+            PreparedStatement preparedStatement;
+            preparedStatement = connection.prepareStatement(sql);
+            preparedStatement.executeUpdate();
+            connection.close();
         }
         catch(SQLException | ClassNotFoundException e)
         {
-            throw new RuntimeException(e);
+            List<Variant> variantList = new ArrayList<>();
+            Response.ResponseBuilder responseBuilder = Response.notAcceptable(variantList);
+            return responseBuilder.status(406).header("message", e.getMessage()).build();
         }
-        return "fix this";
+        return Response.ok().build();
     }
     @Path("/DELETE/{date}")
-    public Response deleteByDate(@PathParam("date")String date)
+    @DELETE
+    public Response deleteByDate(@PathParam("date") String date)
     {
+        try
+        {
+            String sql = null;
+            PreparedStatement preparedStatement;
+            connection = makeConnection();
+            switch(table)
+            {
+                case "stocks":
+                    sql = "delete from stocks where Date = ?";
+                    break;
+                case "bitcoins":
+                    sql = "delete from bitcoin where Date = ?";
+                    break;
+                case "tweets":
+                    List<Variant> variantList = new ArrayList<>();
+                    Response.ResponseBuilder responseBuilder = Response.notAcceptable(variantList);
+                    return responseBuilder.status(406).header("message", "invalid request, Time required").build();
+            }
+            String formatDate = "'"+date+"'";
+            preparedStatement = connection.prepareStatement(sql);
+            preparedStatement.setString(1, formatDate);
+            preparedStatement.executeUpdate();
+            connection.close();
+        }
+        catch(SQLException | ClassNotFoundException e)
+        {
+            List<Variant> variantList = new ArrayList<>();
+            Response.ResponseBuilder responseBuilder = Response.notAcceptable(variantList);
+            return responseBuilder.status(406).header("message", e.getMessage()).build();
+        }
         return Response.ok().build();
+    }
+    private void insertTweetsIntoDatabase(List<Tweet> tweets) throws SQLException, ClassNotFoundException
+    {
+        connection = makeConnection();
+        String sql = "insert into tweets(Date,Time,Text,sentiment) values(?,?,?,?)";
+        PreparedStatement preparedStatement;
+        for(Tweet tweet : tweets)
+        {
+            preparedStatement = connection.prepareStatement(sql);
+            preparedStatement.setString(1, tweet.getDate().toString());
+            preparedStatement.setString(2, tweet.getTime().toString());
+            preparedStatement.setString(3, tweet.getContent());
+            preparedStatement.setString(4, tweet.getSentiment().toString());
+            preparedStatement.execute();
+        }
+        connection.close();
+    }
+    private void insertStocksIntoDatabase(List<Stock> stocks) throws SQLException, ClassNotFoundException
+    {
+        connection = makeConnection();
+        String sql = "insert into stocks(Date,Open,Close) values(?,?,?)";
+        PreparedStatement preparedStatement;
+        for(Stock stock : stocks)
+        {
+            preparedStatement = connection.prepareStatement(sql);
+            preparedStatement.setString(1, stock.getDate().toString());
+            preparedStatement.setDouble(2, stock.getOpen());
+            preparedStatement.setDouble(3, stock.getClose());
+            preparedStatement.execute();
+        }
+        connection.close();
+    }
+    private void insertBitcoinIntoDatabase(List<Bitcoin> bitcoins) throws SQLException, ClassNotFoundException
+    {
+        connection = makeConnection();
+        String sql = "insert into bitcoin(Date,Open,Close) values(?,?,?)";
+        PreparedStatement preparedStatement;
+        for(Bitcoin bitcoin : bitcoins)
+        {
+            preparedStatement = connection.prepareStatement(sql);
+            preparedStatement.setString(1, bitcoin.getDate().toString());
+            preparedStatement.setDouble(2, bitcoin.getOpen());
+            preparedStatement.setDouble(3, bitcoin.getClose());
+            preparedStatement.execute();
+        }
+        connection.close();
+    }
+    private void updateBitcoinData(List<Bitcoin> bitcoins) throws SQLException, ClassNotFoundException
+    {
+        connection = makeConnection();
+        String sql = "update bitcoin set Open = ?, Close = ? where Date = ?";
+        PreparedStatement preparedStatement;
+        for(Bitcoin bitcoin : bitcoins)
+        {
+            preparedStatement = connection.prepareStatement(sql);
+            preparedStatement.setDouble(1, bitcoin.getOpen());
+            preparedStatement.setDouble(2, bitcoin.getClose());
+            preparedStatement.setString(3, bitcoin.getDate().toString());
+            preparedStatement.executeUpdate();
+        }
+        connection.close();
+    }
+    private void updateStockData(List<Stock> stocks) throws SQLException, ClassNotFoundException
+    {
+        connection = makeConnection();
+        String sql = "update stocks set Open = ?, Close = ? where Date = ?";
+        PreparedStatement preparedStatement;
+        for(Stock stock : stocks)
+        {
+            preparedStatement = connection.prepareStatement(sql);
+            preparedStatement.setDouble(1, stock.getOpen());
+            preparedStatement.setDouble(2, stock.getClose());
+            preparedStatement.setString(3, stock.getDate().toString());
+            preparedStatement.executeUpdate();
+        }
+        connection.close();
+    }
+    private void updateTweetData(List<Tweet> tweets) throws SQLException, ClassNotFoundException
+    {
+        connection = makeConnection();
+        String sql = "update tweets set Text = ?,sentiment = ? where Date = ? & Time = ?";
+        PreparedStatement preparedStatement;
+        for(Tweet tweet : tweets)
+        {
+            preparedStatement = connection.prepareStatement(sql);
+            preparedStatement.setString(1, tweet.getContent());
+            preparedStatement.setString(2, tweet.getSentiment().toString());
+            preparedStatement.setString(3, tweet.getDate().toString());
+            preparedStatement.setString(4, tweet.getTime().toString());
+            preparedStatement.executeUpdate();
+        }
+        connection.close();
     }
     private String buildJSONTweetResponse(ResultSet resultSet) throws SQLException
     {
@@ -329,7 +566,6 @@ public class API
         coin.setClose(resultSet.getDouble(3));
         return coin;
     }
-    @Consumes({"application/json","text/json"})
     private String validateJSON(String toValidate)
     {
         JsonSchemaFactory factory = JsonSchemaFactory.getInstance(SpecVersion.VersionFlag.V7);
@@ -347,6 +583,7 @@ public class API
         try
         {
             JsonNode json = JSON_MAPPER.readTree(toValidate);
+            assert path != null;
             String schemaString = new String(Files.readAllBytes(Paths.get(path)));
             JsonSchema schema = factory.getSchema(schemaString);
             Set<ValidationMessage> validationMessages = schema.validate(json);
@@ -379,6 +616,7 @@ public class API
         try
         {
             SchemaFactory factory = SchemaFactory.newInstance(XMLConstants.W3C_XML_SCHEMA_NS_URI);
+            assert path != null;
             Schema schema = factory.newSchema(new File(path));
             Validator validator = schema.newValidator();
             validator.validate(new StreamSource(new StringReader(toValidate)));
@@ -392,7 +630,7 @@ public class API
     private Format checkFormat(HttpHeaders headers)
     {
         String format = headers.getAcceptableMediaTypes().toString();
-        format = format.substring(1,format.indexOf("]"));
+        format = format.substring(1, format.indexOf("]"));
         switch(format)
         {
             case "application/json":
@@ -400,7 +638,7 @@ public class API
             case "application/xml":
                 return Format.XML;
             default:
-            throw new IllegalWebFormatException("Invalid format requested. Accepted formats are application/json and application/xml.");
+                throw new IllegalWebFormatException("Invalid format requested. Accepted formats are application/json and application/xml.");
         }
     }
 
