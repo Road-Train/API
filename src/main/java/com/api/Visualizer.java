@@ -12,47 +12,61 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLConnection;
 import java.nio.charset.StandardCharsets;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
 
 import static com.api.Parser.JSON_MAPPER;
-public class Visualizer
+public class Visualizer extends JFrame
 {
+    private final DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
+    private JTabbedPane selection;
+    private JTabbedPane operation;
+    private JScrollPane dateScroller;
+    private JPanel main;
+    private JPanel dateButtons;
+    private JPanel queryPanel;
+    private JFormattedTextField dateSearch;
+    private JPanel datePanel;
+    private JButton dateButton;
+    private JPanel dataPanel;
+    public Visualizer(String name)
+    {
+        super(name);
+        setContentPane(main);
+        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        setSize(800, 600);
+        getContentPane().setLayout(new BorderLayout());
+        setPreferredSize(new Dimension(800, 600));
+        getContentPane().add(datePanel,BorderLayout.WEST);
+        getContentPane().add(selection,BorderLayout.CENTER);
+        pack();
+        setVisible(true);
+
+    }
     public static void main(String[] args)
     {
-        JFrame frame = new JFrame("Elon's influence on the stock markets");
-        JPanel dateButtons = new JPanel();
-        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        frame.setSize(800, 600);
-        JMenuBar mb = new JMenuBar();
-        JMenu queries = new JMenu("Perform Query");
-        mb.add(queries);
-        JMenuItem tweets = new JMenuItem("Tweets");
-        JMenuItem stocks = new JMenuItem("Stocks");
-        JMenuItem bitcoins = new JMenuItem("Bitcoins");
-        queries.add(tweets);
-        queries.add(stocks);
-        queries.add(bitcoins);
-        Stock[] dates = getDates();
-        for(Stock date : dates)
-        {
-            JButton button = new JButton(date.getDate().toString());
-            button.addActionListener(e -> setGUI(button.getText()));
-            dateButtons.add(button);
-        }
-        JScrollPane scrollPane = new JScrollPane(dateButtons,JScrollPane.VERTICAL_SCROLLBAR_ALWAYS,JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
-        dateButtons.setLayout(new BoxLayout(dateButtons,BoxLayout.Y_AXIS));
-        frame.getContentPane().setLayout(new BorderLayout());
-        frame.setPreferredSize(new Dimension(800, 600));
-        frame.pack();
-        frame.setVisible(true);
-        frame.getContentPane().add(mb, BorderLayout.NORTH);
-        frame.getContentPane().add(scrollPane, BorderLayout.WEST);
+        Visualizer v = new Visualizer("Elon's influence on the stock market");
     }
     static void setGUI(String date)
     {
 
         Stock stock = stockByDate(date);
-        Bitcoin bitcoin = bitcoinByDate(date);
-        Tweet[] tweets = tweetsByDate(date);
+        try
+        {
+            Bitcoin bitcoin = bitcoinByDate(date);
+        }
+        catch(ArrayIndexOutOfBoundsException e)
+        {
+            System.err.println("No bitcoin data available for this date.");//TODO: work this into the GUI
+        }
+        try
+        {
+            Tweet[] tweets = tweetsByDate(date);
+        }
+        catch(ArrayIndexOutOfBoundsException e)
+        {
+            System.err.println("No tweets available for this date.");//TODO: work this into the GUI
+        }
     }
     /**
      * A static method to fetch the data of the stock market specifically, to be used for dates.
@@ -87,14 +101,15 @@ public class Visualizer
             http.setDoOutput(true);
             http.setRequestProperty("Accept","application/json");
             InputStream input = connection.getInputStream();
-            return JSON_MAPPER.readValue(input,Stock.class);
+            Stock[] output = JSON_MAPPER.readValue(input,Stock[].class);
+            return output[0];
         }
         catch(IOException e)
         {
             throw new RuntimeException(e);
         }
     }
-    static Bitcoin bitcoinByDate(String date)
+    static Bitcoin bitcoinByDate(String date) throws ArrayIndexOutOfBoundsException
     {
         try
         {
@@ -105,7 +120,8 @@ public class Visualizer
             http.setDoOutput(true);
             http.setRequestProperty("Accept","application/json");
             InputStream input = connection.getInputStream();
-            return JSON_MAPPER.readValue(input,Bitcoin.class);
+            Bitcoin[] output = JSON_MAPPER.readValue(input,Bitcoin[].class);
+            return output[0];
         }
         catch(IOException e)
         {
@@ -154,6 +170,20 @@ public class Visualizer
         catch(IOException e)
         {
             throw new RuntimeException(e);
+        }
+    }
+    private void createUIComponents()
+    {
+        dateSearch = new JFormattedTextField(dateFormat);
+        dateButtons = new JPanel();
+        dateButtons.setLayout(new BoxLayout(dateButtons,BoxLayout.Y_AXIS));
+        dateScroller = new JScrollPane();
+        Stock[] dates = getDates();
+        for(Stock date : dates)
+        {
+            JButton button = new JButton(date.getDate().toString());
+            button.addActionListener(e -> setGUI(button.getText()));
+            dateButtons.add(button);
         }
     }
 }
