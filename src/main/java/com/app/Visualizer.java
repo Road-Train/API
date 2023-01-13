@@ -231,7 +231,7 @@ public class Visualizer extends JFrame
         }
         catch(ArrayIndexOutOfBoundsException e)
         {
-            System.err.println("No bitcoin data available for this date.");//TODO: work this into the GUI
+            System.err.println("No bitcoin data available for this date.");
         }
         try
         {
@@ -239,7 +239,7 @@ public class Visualizer extends JFrame
         }
         catch(ArrayIndexOutOfBoundsException e)
         {
-            System.err.println("No tweets available for this date.");//TODO: work this into the GUI
+            System.err.println("No tweets available for this date.");
         }
         bitcoinChart.clear();
         stockChart.clear();
@@ -258,7 +258,7 @@ public class Visualizer extends JFrame
         bitcoinChart.start();
         stockChart.start();
     }
-    private String userGet(String url, String returnType) throws IOException//TODO: implement
+    private String userGet(String url, String returnType) throws IOException
     {
         String table = getTableSelect.getSelectedItem().toString();
         URL target = new URL("http://localhost:8080/api/" + table + "/GET/");

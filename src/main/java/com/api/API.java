@@ -566,7 +566,7 @@ public class API
         coin.setClose(resultSet.getDouble(3));
         return coin;
     }
-    private String validateJSON(String toValidate)
+    private String validateJSON(String toValidate)//TODO: Files cannot be changed to relative paths, please copy/paste the absolute path from your PC.
     {
         JsonSchemaFactory factory = JsonSchemaFactory.getInstance(SpecVersion.VersionFlag.V7);
         String path = null;
@@ -600,7 +600,7 @@ public class API
             return e.getMessage();
         }
     }
-    private String validateXML(String toValidate)
+    private String validateXML(String toValidate)//TODO: Files cannot be changed to relative paths, please copy/paste the absolute path from your PC.
     {
         String path = null;
         switch(table)
