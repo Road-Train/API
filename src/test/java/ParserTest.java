@@ -2,19 +2,20 @@ import com.api.Format;
 import com.api.Parser;
 import com.api.SentimentText;
 import com.api.SerialFormat;
-import model.*;
+import com.model.Bitcoin;
+import com.model.Sentiment;
+import com.model.Stock;
+import com.model.Tweet;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
-import java.util.Date;
 public class ParserTest
 {
     Tweet tweet;
     Bitcoin bitcoin;
     Stock stock;
-    Parser parser;
     @BeforeEach
     void setup()
     {

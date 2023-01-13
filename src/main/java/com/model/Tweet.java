@@ -1,4 +1,4 @@
-package model;
+package com.model;
 import com.api.SentimentText;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -13,6 +13,7 @@ import java.io.Serializable;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.Map;
+import java.util.StringJoiner;
 @JacksonXmlRootElement(localName = "tweet")
 @Table(name = "tweets")
 @IdClass(DateTimeId.class)
@@ -86,5 +87,14 @@ public class Tweet implements Serializable
         {
             this.setSentiment(new Sentiment(SentimentText.getValue((String) sentiment.get("sentimentText")), (double)sentiment.get("sentimentValue")));
         }
+    }
+    public String toString()
+    {
+        StringJoiner tweetString = new StringJoiner("\n");
+        tweetString.add("Date: "+date);
+        tweetString.add("Time: "+time);
+        tweetString.add("Content: "+content);
+        tweetString.add("Sentiment: "+sentiment.toString());
+        return tweetString.toString();
     }
 }

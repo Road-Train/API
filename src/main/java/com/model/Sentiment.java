@@ -1,4 +1,4 @@
-package model;
+package com.model;
 import com.api.SentimentText;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.Column;

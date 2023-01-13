@@ -1,4 +1,4 @@
-package model;
+package com.model;
 import com.api.SentimentText;
 import jakarta.persistence.AttributeConverter;
 import jakarta.persistence.Converter;

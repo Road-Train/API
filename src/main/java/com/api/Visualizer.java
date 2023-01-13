@@ -1,9 +1,9 @@
 package com.api;
 import com.raven.chart.Chart;
 import com.raven.chart.ModelChart;
-import model.Bitcoin;
-import model.Stock;
-import model.Tweet;
+import com.model.Bitcoin;
+import com.model.Stock;
+import com.model.Tweet;
 
 import javax.swing.*;
 import java.awt.*;
@@ -21,9 +21,9 @@ import java.util.Vector;
 import static com.api.Parser.JSON_MAPPER;
 public class Visualizer extends JFrame
 {
+    private final DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
     private com.raven.chart.Chart stockChart;
     private com.raven.chart.Chart bitcoinChart;
-    private final DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
     private JTabbedPane selection;
     private JTabbedPane operation;
     private JScrollPane dateScroller;
@@ -34,6 +34,9 @@ public class Visualizer extends JFrame
     private JPanel dataPanel;
     private JComboBox getTableSelect;
     private JComboBox dateComboBox;
+    private JSplitPane charts;
+    private JScrollPane tweetScroller;
+    private JPanel tweetPanel;
     public Visualizer(String name)
     {
         super(name);
@@ -44,6 +47,8 @@ public class Visualizer extends JFrame
         setPreferredSize(new Dimension(800, 600));
         getContentPane().add(datePanel, BorderLayout.WEST);
         getContentPane().add(selection, BorderLayout.CENTER);
+        charts.setTopComponent(stockChart);
+        charts.setBottomComponent(bitcoinChart);
         pack();
         setVisible(true);
 
@@ -51,39 +56,6 @@ public class Visualizer extends JFrame
     public static void main(String[] args)
     {
         Visualizer v = new Visualizer("Elon's influence on the stock market");
-    }
-    private void setGUI(String date)
-    {
-
-        Stock stock = stockByDate(date);
-        Bitcoin bitcoin = null;
-        Tweet[] tweets;
-        try
-        {
-            bitcoin = bitcoinByDate(date);
-        }
-        catch(ArrayIndexOutOfBoundsException e)
-        {
-            System.err.println("No bitcoin data available for this date.");//TODO: work this into the GUI
-        }
-        try
-        {
-            tweets = tweetsByDate(date);
-        }
-        catch(ArrayIndexOutOfBoundsException e)
-        {
-            System.err.println("No tweets available for this date.");//TODO: work this into the GUI
-        }
-        bitcoinChart.clear();
-        stockChart.clear();
-        stockChart.addData(new ModelChart("Stocks",new double[]{stock.getOpen(),stock.getClose()}));
-        bitcoinChart.addData(new ModelChart("Bitcoins",new double[]{bitcoin.getOpen(),bitcoin.getClose()}));
-        bitcoinChart.start();
-        stockChart.start();
-        dataPanel.add(stockChart);
-        dataPanel.add(bitcoinChart);
-        pack();
-        setVisible(true);
     }
     /**
      * A method that will automatically fetch all stock dates which have associated tweet and bitcoin data present.
@@ -247,14 +219,57 @@ public class Visualizer extends JFrame
             throw new RuntimeException(e);
         }
     }
+    private void setGUI(String date)
+    {
+
+        Stock stock = stockByDate(date);
+        Bitcoin bitcoin = null;
+        Tweet[] tweets = null;
+        try
+        {
+            bitcoin = bitcoinByDate(date);
+        }
+        catch(ArrayIndexOutOfBoundsException e)
+        {
+            System.err.println("No bitcoin data available for this date.");//TODO: work this into the GUI
+        }
+        try
+        {
+            tweets = tweetsByDate(date);
+        }
+        catch(ArrayIndexOutOfBoundsException e)
+        {
+            System.err.println("No tweets available for this date.");//TODO: work this into the GUI
+        }
+        bitcoinChart.clear();
+        stockChart.clear();
+        stockChart.addData(new ModelChart("Stocks", new double[]{stock.getOpen(), stock.getClose()}));
+        bitcoinChart.addData(new ModelChart("Bitcoins", new double[]{bitcoin.getOpen(), bitcoin.getClose()}));
+        tweetPanel.removeAll();
+        for(Tweet tweet : tweets)
+        {
+            JTextArea tweetField = new JTextArea(tweet.toString()+"\n");
+            tweetField.setWrapStyleWord(true);
+            tweetField.setLineWrap(true);
+            tweetField.setEditable(false);
+            tweetPanel.add(tweetField);
+        }
+        tweetPanel.revalidate();
+        bitcoinChart.start();
+        stockChart.start();
+    }
     private String userGet(String url, String returnType) throws IOException//TODO: implement
     {
-        URL target = new URL("http:127.0.0.1");
+        String table = getTableSelect.getSelectedItem().toString();
+        URL target = new URL("http://localhost:8080/api/" + table + "/GET/");
         getConnect(target, returnType);
         return "fix";
     }
     private void createUIComponents()
     {
+        tweetScroller = new JScrollPane();
+        tweetPanel = new JPanel();
+        tweetPanel.setLayout(new BoxLayout(tweetPanel, BoxLayout.Y_AXIS));
         stockChart = new Chart();
         stockChart.addLegend("Open", new Color(52, 127, 208));
         stockChart.addLegend("Close", new Color(241, 80, 80));
