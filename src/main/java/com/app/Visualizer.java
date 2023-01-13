@@ -1,9 +1,9 @@
-package com.api;
+package com.app;
 import com.raven.chart.Chart;
 import com.raven.chart.ModelChart;
-import com.model.Bitcoin;
-import com.model.Stock;
-import com.model.Tweet;
+import com.api.model.Bitcoin;
+import com.api.model.Stock;
+import com.api.model.Tweet;
 
 import javax.swing.*;
 import java.awt.*;

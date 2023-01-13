@@ -2,10 +2,10 @@ import com.api.Format;
 import com.api.Parser;
 import com.api.SentimentText;
 import com.api.SerialFormat;
-import com.model.Bitcoin;
-import com.model.Sentiment;
-import com.model.Stock;
-import com.model.Tweet;
+import com.api.model.Bitcoin;
+import com.api.model.Sentiment;
+import com.api.model.Stock;
+import com.api.model.Tweet;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 

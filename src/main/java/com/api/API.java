@@ -8,9 +8,9 @@ import com.networknt.schema.SpecVersion;
 import com.networknt.schema.ValidationMessage;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.*;
-import com.model.Bitcoin;
-import com.model.Stock;
-import com.model.Tweet;
+import com.api.model.Bitcoin;
+import com.api.model.Stock;
+import com.api.model.Tweet;
 import org.xml.sax.SAXException;
 
 import javax.xml.XMLConstants;

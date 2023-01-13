@@ -4,9 +4,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.xml.XmlMapper;
 import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlElementWrapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
-import com.model.Bitcoin;
-import com.model.Stock;
-import com.model.Tweet;
+import com.api.model.Bitcoin;
+import com.api.model.Stock;
+import com.api.model.Tweet;
 
 import java.io.IOException;
 import java.io.Serializable;
