@@ -575,7 +575,7 @@ public class API
             case "tweets":
                 path = "C:\\Users\\trol1\\IdeaProjects\\API\\src\\main\\resources\\schemas\\tweetschema.json";
                 break;
-            case "bitcoin":
+            case "bitcoins":
             case "stocks":
                 path = "C:\\Users\\trol1\\IdeaProjects\\API\\src\\main\\resources\\schemas\\stockschema.json";
                 break;
